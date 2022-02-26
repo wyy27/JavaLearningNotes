@@ -283,3 +283,374 @@ public class NewWorkStealingPoolTest {
 }
 ```
 Executors 的 5 个功能线程池虽然方便，但现在已经不建议使用了，而是建议直接通过使用 **ThreadPoolExecutor** 的方式，这样的处理方式让写的同学更加明确线程池的运行规则，规避资源耗尽的风险。
+
+### Thread类和Runnable接口区别  
+实现Runnable接口相对于继承Thread类来说，有如下优势：
+
+- 适合相同程序的多个线程去处理同一资源的情况。
+
+- 可以避免由于Java的单继承特性带来的局限。
+
+- 增强了程序的健壮性，代码能够被多个线程共享，代码与数据是独立的。
+
+Runnable接口是Thread类的父类。
+
+#### 继承Thread类实现卖票操作
+```java
+public class MyThread extends Thread{
+	
+	private int ticket = 10;
+	
+	public MyThread(String name) {
+		super(name);
+	}
+	
+	public void run() {
+		while (true) {
+			if(ticket>0) {
+				System.out.println(Thread.currentThread().getName() + "卖出第" + (10 - ticket-- + 1)+"张票");
+			}
+		}
+	}
+	
+}
+
+public class MyThreadTest {
+	
+	public static void main(String[] args) {
+		MyThread myThread1 = new MyThread("窗口1");
+		MyThread myThread2 = new MyThread("窗口2");
+		MyThread myThread3 = new MyThread("窗口3");
+		myThread1.start();
+		myThread2.start();
+		myThread3.start();
+	}
+
+}
+```
+**运行结果：**
+```
+窗口2卖出第1张票
+窗口3卖出第1张票
+窗口3卖出第2张票
+窗口3卖出第3张票
+窗口1卖出第1张票
+窗口3卖出第4张票
+窗口2卖出第2张票
+窗口3卖出第5张票
+...
+```
+各个窗口（线程）独立从第1张票卖到第10张票。
+#### 实现Runnable接口实现卖票操作
+```java
+public class MyRunnable implements Runnable{
+	
+	private int ticket = 10;
+	
+	public void run() {
+		while (true) {
+			if(ticket>0) {
+				System.out.println(Thread.currentThread().getName() + "卖出第" + (10 - ticket-- + 1)+"张票");
+			}
+		}
+	}
+
+}
+
+public class MyRunnableTest {
+	public static void main(String[] args) {
+		MyRunnable myRunnable = new MyRunnable();
+		
+		Thread myThread1 = new Thread(myRunnable, "窗口1");
+		Thread myThread2 = new Thread(myRunnable, "窗口2");
+		Thread myThread3 = new Thread(myRunnable, "窗口3");
+		myThread1.start();
+		myThread2.start();
+		myThread3.start();
+	}
+}
+```
+**运行结果：**  
+```
+窗口2卖出第1张票
+窗口1卖出第2张票
+窗口2卖出第3张票
+窗口1卖出第5张票
+窗口3卖出第4张票
+窗口1卖出第7张票
+窗口2卖出第6张票
+窗口1卖出第9张票
+窗口3卖出第8张票
+窗口2卖出第10张票
+```
+虽然以上程序启动了3个线程，3个线程一共才卖出10票，即ticket的属性被所有的线程对象共享。
+
+- 结论：继承Thread类，就是多个线程各自完成自己的任务；实现Runnable接口，就是多个线程共同完成一个任务。
+
+### 线程start和run方法的区别
+
+直接调用Thread实例的run()方法是无效的。
+
+```java
+public class UserThread extends Thread{
+	
+	public void run() {
+		System.out.println(Thread.currentThread().getName() + "，执行run方法");
+	}
+
+}
+
+public class UserTreadTest {
+	
+	public static void main(String[] args) {
+		System.out.println(Thread.currentThread().getName()+",执行main方法");
+		UserThread userThread = new UserThread();
+		userThread.run();
+	}
+
+}
+```
+
+运行结果：
+
+```
+main,执行main方法
+main，执行run方法
+```
+
+必须调用Thread实例的start()方法才能启动新线程。
+
+```java
+public class UserTreadTest {	
+	public static void main(String[] args) {
+		System.out.println(Thread.currentThread().getName()+",执行main方法");
+		UserThread userThread = new UserThread();
+		userThread.start(); 
+	}
+}
+```
+
+执行结果：
+```
+main,执行main方法
+Thread-0，执行run方法
+```
+
+- 总结：执行start()可以启动线程，执行run方法并不会启动线程。
+
+###  线程的优先级
+
+Java可以对线程设定优先级，设定优先级的方法是：
+```java
+Thread.setPriority(int n) // 1~10, 默认值5
+```
+
+优先级范围1~10，默认5，10最高
+
+不能通过设置优先级来确保高优先级的线程一定会先执行。（优先级无法保障线程执行次序）
+
+优先级高的线程被操作系统调度的优先级较高，操作系统对高优先级线程可能调度更频繁（优先级的线程获取CPU资源的概率较大，优先级低的并非没机会执行）
+
+主线程main的优先级是5。
+
+##### Java线程的优先级案例
+
+```java
+public class UserThread extends Thread {
+	
+	public void run() {
+		for (int i = 0; i < 10; i++) {
+			System.out.println(Thread.currentThread().getName() + "，第" + i + "次执行");
+		}
+	}
+}
+public class UserRunn implements Runnable {
+	
+	public void run() {
+		for (int i = 0; i < 10; i++) {
+			System.out.println(Thread.currentThread().getName() + "，第" + i + "次执行");
+		}
+	}
+
+}
+public class Test {
+	
+	public static void main(String[] args) {		
+		Thread t1 = new UserThread();
+		Thread t2 = new Thread(new UserRunn());
+		
+		//设置线程的优先级
+		t1.setPriority(10);
+		t2.setPriority(1);
+		
+		t1.start();
+		t2.start();
+	}
+
+}
+```
+
+### 定时线程的任务调度
+#### 定时线程schedule()：延时不追加执行任务
+```java
+import java.util.Date;
+import java.util.TimerTask;
+
+public class UserTask extends TimerTask {
+	
+	public void run() {
+		System.out.println(Thread.currentThread().getName()+":"+ new Date());
+	}
+
+}
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Timer;
+
+public class Test {
+	public static void main(String[] args) throws ParseException {		
+		Timer t = new Timer();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+		Date date = sdf.parse("2022-02-26 19:00:00");
+		t.schedule(new UserTask(), date, 5000);
+	}
+}
+```
+#### 定时线程scheduleAtFixedRate()：延时追加执行任务 
+
+时间超过指定开始时间，（程序一开始执行时就会）补回应该执行的线程次数
+
+```java
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Timer;
+
+public class Test {
+	public static void main(String[] args) throws ParseException {		
+		Timer t = new Timer();
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+		Date date = sdf.parse("2022-02-26 19:00:00");
+		t.scheduleAtFixedRate(new UserTask(), date, 5000);
+	}
+}
+```
+
+###  接口同步回调和异步回调
+
+#### 同步调用：
+
+一种阻塞式调用，调用方要等待对方执行完毕才返回，它是一种单向调用
+
+接口同步回调案例
+```java
+import javax.security.auth.callback.Callback;
+
+public class MyCallback implements Callback {
+	
+	public void process(int status) {
+		System.out.println("处理成功，返回状态为："+ status);
+	}
+
+}
+```
+```java
+public class Server {
+	public void getMsg(MyCallback callback, String msg) throws InterruptedException {
+		System.out.println("服务器端获得消息：" + msg);
+		// 模拟消息处理，等待两秒钟
+		Thread.sleep(2000);
+		System.out.println("服务器端处理成功，返回状态为200");
+		//处理完消息，调用回调方法，告知客户端
+		callback.process(200);
+	}
+
+}
+```
+```java
+public class Client {
+	Server server;
+	
+	public Client(Server server) { this.server = server; }
+	
+	public void sendMsg(final String msg) {
+		System.out.println("客户端发送消息："+ msg);
+		try{
+			server.getMsg(new MyCallback(), msg);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("客户端已经发送消息给客户端，请稍等");
+	}
+
+}
+```
+```java
+public class Test {
+	
+	public static void main(String[] args) {
+		Server server = new Server();
+		Client client = new Client(server);
+		client.sendMsg("我要充值");
+	}
+
+}
+```
+
+**运行结果：**（同步调用）
+
+```
+客户端发送消息：我要充值
+服务器端获得消息：我要充值
+服务器端处理成功，返回状态为200
+处理成功，返回状态为：200
+客户端已经发送消息给客户端，请稍等
+```
+
+#### 异步调用：
+
+一种类似消息或事件的机制，不过它的调用方向刚好相反，接口的服务在收到某种讯息或发生某种事件时，会主动通知客户方。
+
+(不需要等待被调用方执行完毕才返回）
+
+接口异步调用案例
+```java
+public class Client {
+	Server server;
+	
+	public Client(Server server) { this.server = server; }
+	
+	public void sendMsg(final String msg) {
+		System.out.println("客户端发送消息："+ msg);
+//		try{
+//			server.getMsg(new MyCallback(), msg);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
+		new Thread(new Runnable() {
+			public void run() {
+				try {
+					server.getMsg(new MyCallback(), msg);
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}).start();
+		System.out.println("客户端已经发送消息给客户端，请稍等");
+	}
+}
+```
+
+运行结果：
+
+```
+客户端发送消息：我要充值
+客户端已经发送消息给客户端，请稍等
+服务器端获得消息：我要充值
+服务器端处理成功，返回状态为200
+处理成功，返回状态为：200
+```
+
+- 总结：回调分为同步和异步，区别就是需不需要等待服务器端的返回结果。
