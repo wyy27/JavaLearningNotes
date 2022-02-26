@@ -8,19 +8,278 @@
 ### 创建线程的五种方式
 - **继承Thread类并重写其run()，run()方法中定义需要执行的任务。**  
 创建后的子类通过调用**start()**方法即可执行线程方法。  
-**步骤：**  
- 1.定义UserThread类，继承Thread  
- 2.继承run()方法  
- 3.创建UserThread对象  
- 4.调用start()方法启动线程  
-    - 创建不同的Thread对象，多个线程之间自然不共享资源。  
+```java
+package javaP;
+/*
+ * 继承Thread类并重写run()创建线程
+ * 步骤：
+ * 1.定义UserThread类，继承Thread
+ * 2.继承run()方法
+ * 3.创建UserThread对象
+ * 4.调用start()方法启动线程
+ */
+public class UserThread extends Thread {
+	public void run() {
+		for (int i = 0; i < 10; i++) {
+			System.out.println(Thread.currentThread().getName() + " is running " + i);
+		}
+	}
+}
+```
+```java
+package javaP;
+
+public class UserThreadTest {
+	public static void main (String[] args) {
+		Thread t1 = new UserThread();
+		Thread t2 = new UserThread();
+		t1.start();
+		t2.start();
+	}
+}
+```
+   - 创建不同的Thread对象，多个线程之间自然不共享资源。  
   
 - **创建Thread实例时，传入一个Runnable实例：**  
-定义一个类创建Runnable 接口并重写该接口的run()方法，此run方法是线程执行体。接着创建Runnable实现类的对象，作为创建Thread对象的参数target。  
-**步骤：**  
-1. 定义一个类UserRun， 实现Runnable接口  
- 2. 重写run()方法  
- 3. 创建UserRun类的对象  
- 4. 创建Thread的对象，把UserRun类的对象构造方法的参数  
- 5. 启动线程    
-     - 实现线程间的资源共享。
+定义一个类创建Runnable 接口并重写该接口的**run()** 方法，此run方法是线程执行体。接着创建Runnable实现类的对象，作为创建Thread对象的参数target。  
+```java
+package javaP;
+/*
+ * 实现Runnable接口创建线程：
+ * 步骤
+ * 1. 定义一个类UserRun， 实现Runnable接口
+ * 2. 重写run()方法
+ * 3. 创建UserRun类的对象
+ * 4. 创建Thread的对象，把UserRun类的对象构造方法的参数
+ * 5. 启动线程
+ */
+public class UserRun implements Runnable{
+
+	@Override
+	public void run() {
+		for (int i = 0; i < 10; i++) {
+			System.out.println(Thread.currentThread().getName() + " is running " + i);
+		}		
+	}
+}
+```
+```java
+package javaP;
+
+public class UserRunTest {
+	
+	public static void main(String[] args) {
+		UserRun userRun = new UserRun();
+		new Thread(userRun).start();
+		new Thread(userRun).start();
+	}
+
+}
+```
+    - 实现线程间的资源共享。  
+
+- **实现Callable接口实现带有返回值的线程**   
+Callable接口如同Runnable接口的升级版，其提供的**call()** 方法作为现成的执行体，同时允许有 **返回值**。  
+Callable对象不能直接作为Thread对象的参数target，因为Callable接口是Java5新增的接口，不是Runnable的子接口。  
+为解决这个问题，引入了Future接口，此接口可以接受call()的返回值，**RunnableFuture接口** 是Future接口和Runnable接口的子接口，可以作为Thread对象的target。  
+```java
+package javaP;
+
+import java.util.concurrent.Callable;
+
+/*
+ * 实现Callable接口实现带有返回值的线程
+ * 步骤： 
+ * 1. 定义类UserCallable，实现Callable接口
+ * 2. 重写class方法
+ * 3. 创建UserCallable的对象
+ * 4. 创捷RunnableFuture接口的子类FutureTask的对象，构造函数的参数是UserCallable的对象
+ * 5. 创建Thread类的对象，构造函数是FutureTask的对象
+ * 6. 启动线程
+ */
+public class UserCallable implements Callable{
+
+	@Override
+	public Object call() throws Exception {
+		System.out.println(Thread.currentThread().getName() + ": learning");
+		return "learning";
+	}
+	
+}
+```
+```java
+package javaP;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+
+public class UserCallableTest {
+	public static void main(String[] args) throws InterruptedException, ExecutionException {
+		UserCallable userCallable = new UserCallable();
+		FutureTask futureTask = new FutureTask(userCallable);
+		
+		Thread t = new Thread(futureTask);
+		t.start();
+		System.out.println(futureTask.get());
+	}
+}
+```
+
+- **继承TimerTask**  
+Timer和TimerTask可以做为实现线程的另一种方式。  
+Timer是一种线程设施，用于安排以后在后台线程中执行的任务。可安排任务执行一次，或者定期重复执行，可以看成一个**定时器** ，可以调度TimerTask。  
+TimerTak是一个抽象类，实现了Runnable接口，所以具备了多线程的能力。  
+```java
+import java.util.Date;
+import java.util.TimerTask;
+
+/*
+ * 步骤：
+ * 1. 定义类UserTask，继承抽象类TimerTask
+ * 2. 创建UserTask类的对象
+ * 3. 创建Timer类的对象，设置任务的执行策略
+ */
+public class UserTask extends TimerTask{
+
+	@Override
+	public void run() {
+		System.out.println(Thread.currentThread().getName() + " is running " + new Date());
+	}
+
+}
+```
+```java
+import java.util.Timer;
+
+public class UserTaskTest {
+	public static void main(String[] args)  {
+		UserTask userTask = new UserTask();
+		Timer timer = new Timer();
+		
+		timer.schedule(userTask, 5000, 3000);  
+		// 等待5秒钟后执行，每3秒输出
+	}
+
+}
+```
+
+- **通过线程池启动多线程**
+#### 通过Excutors的工具类可以创建线程池。
+ - **提高系统响应速度**，当有任务到达时，通过复用已存在的线程，无需等待新线程的创建便能立即执行。  
+ - **降低系统资源能耗**，通过重用已存在的线程，降低线程创建和销毁造成的消耗。  
+ - **方便线程并发数的管控**，因为线程若是无限制的创建，可能会导致内存占用过多而产生OOM，并且会造成cpu过度切换。
+##### 线程池一：newFixedThreadPool固定大小线程池  
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class FixThreadTest {
+	
+	public static void main(String[] args) {
+	 //1. 创建固定大小的线程池  nThreads: 3
+		ExecutorService ex = Executors.newFixedThreadPool(3);
+	// 2. 使用线程池执行任务
+		for (int i = 0; i < 5; i++) {
+			ex.submit(new Runnable() {
+				public void run() {
+					for(int j = 0; j < 10; j++) {
+						System.out.println(Thread.currentThread().getName() + "  " + j);
+					}
+				}
+			});
+		}
+	// 3.关闭线程池（继续执行原任务，不再接受新任务）
+		ex.shutdown();
+	}
+}
+```
+##### 线程池二：SingleThreadPoolExecutor单线程池  
+可以串行执行任务，保证顺序按输入顺序执行。  
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class SingleThreadExecutorTest {
+
+	public static void main(String[] args) {
+		ExecutorService ex = Executors.newSingleThreadScheduledExecutor();
+		
+		for (int i = 0; i < 5; i++) {
+			ex.submit(new Runnable() {
+				public void run() {
+					for(int j = 0; j < 10; j++) {
+						System.out.println(Thread.currentThread().getName() + "  " + j);
+					}
+				}
+			});
+		}
+		ex.shutdown();
+	}
+}
+```
+
+##### 线程池三： CashedThreadPool()缓存线程池
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class CashedThreadTest {
+	public static void main(String[] args) {
+		ExecutorService ex = Executors.newCachedThreadPool();
+		
+		for (int i = 0; i < 5; i++) {
+			ex.submit(new Runnable() {
+				public void run() {
+					for(int j = 0; j < 10; j++) {
+						System.out.println(Thread.currentThread().getName() + "  " + j);
+					}
+				}
+			});
+		}
+		ex.shutdown();
+	}
+}
+```
+
+##### 线程池四：newScheduledThreadPool()创建一个周期性的线程池，支持定时及周期性执行任务
+```java
+import java.util.Date;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+public class ScheduledThreadPoolTest {
+	public static void main(String[] args) {
+		ScheduledExecutorService ex = Executors.newScheduledThreadPool(5);
+	    ex.scheduleAtFixedRate(new Runnable() {
+	    	public void run() {
+	    		System.out.println(Thread.currentThread().getName() + " 执行 " + new Date());
+	    	}
+	    }, 5, 3, TimeUnit.SECONDS);
+	}	
+}
+```
+
+##### 线程池五：newWorkStealingPool新的线程池类ForkJoinPool的扩展
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class NewWorkStealingPoolTest {
+	public static void main(String[] args) throws InterruptedException{
+		System.out.println("--start--");
+		ExecutorService ex = Executors.newWorkStealingPool();
+		for(int j = 0; j < 10; j++) {
+			ex.submit(new Runnable() {
+				public void run() {
+					System.out.println(Thread.currentThread().getName());
+				}
+			});
+		}
+		//让主线程等待3秒，等子线程执行完
+		Thread.sleep(3000);
+		System.out.println("--end--");
+	}	
+}
+```
+Executors 的 5 个功能线程池虽然方便，但现在已经不建议使用了，而是建议直接通过使用 **ThreadPoolExecutor** 的方式，这样的处理方式让写的同学更加明确线程池的运行规则，规避资源耗尽的风险。
